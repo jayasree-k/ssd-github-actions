@@ -1,30 +1,49 @@
-name: Secret Scan
-
+name: Security and Code Quality Scan
 on:
   pull_request:
     branches:
-      - main  # Trigger when PR targets main
-      - dev*  
+      - main
+      - dev*
 jobs:
-  trivy-scan:
-    name: Scan for Secrets
+  scan-and-test:
     runs-on: ubuntu-latest
-
     steps:
-      # Step 1: Checkout PR branch
       - name: Checkout code
-        uses: actions/checkout@v3
-
-      # Step 2: Install Trivy
+        uses: actions/checkout@v4
+      # Install Trivy
       - name: Install Trivy
         run: |
-          sudo apt-get update
-          sudo apt-get install wget -y
-          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.43.0_Linux-64bit.deb
-          sudo dpkg -i trivy_0.43.0_Linux-64bit.deb
-
-      # Step 3: Run Trivy secret scan
-      - name: Run Trivy Secret Scan
+          sudo apt-get update -y
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update -y
+          sudo apt-get install -y trivy
+      # Run Trivy Scan (secrets + vulnerabilities)
+      - name: Run Trivy Scan
         run: |
-          trivy fs --exit-code 1 --severity CRITICAL,HIGH --scanners secret .
-
+          echo "
+ Running Trivy scan..."
+          trivy fs --scanners vuln,secret --exit-code 1 --no-progress .
+      # Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest
+      # Run Python Linter (will fail on errors)
+      - name: Run flake8 (Linting)
+        run: |
+          echo "
+ Running lint checks..."
+          flake8 . --select=E
+      # Run Python Tests (allow no tests, but fail on real errors)
+      - name: Run pytest
+        run: |
+          echo "
+ Running tests..."
+          pytest --maxfail=1 --disable-warnings -q || [ $? -eq 5 ]
