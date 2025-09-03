@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - main  # Trigger when PR targets main
-
+      - dev*  
 jobs:
   trivy-scan:
     name: Scan for Secrets
