@@ -1,30 +1,30 @@
-name: PR Dev Branch Secret Scan
+name: Secret Scan
 
 on:
   pull_request:
     branches:
-      - main          # trigger only when PR targets main
+      - main  # Trigger when PR targets main
 
 jobs:
-  dev-secret-scan:
+  trivy-scan:
+    name: Scan for Secrets
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the dev branch (not the PR branch)
-      - name: Checkout dev branch
-        uses: actions/checkout@v4
-        with:
-          ref: dev
+      # Step 1: Checkout PR branch
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      # Install Trivy
+      # Step 2: Install Trivy
       - name: Install Trivy
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget tar
+          sudo apt-get install wget -y
           wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.43.0_Linux-64bit.deb
           sudo dpkg -i trivy_0.43.0_Linux-64bit.deb
 
-      # Run Trivy secret scan on dev branch
-      - name: Scan dev branch for secrets
+      # Step 3: Run Trivy secret scan
+      - name: Run Trivy Secret Scan
         run: |
-          trivy fs --exit-code 1 --severity CRITICAL,HIGH .
+          trivy fs --exit-code 1 --severity CRITICAL,HIGH --scanners secret .
+
