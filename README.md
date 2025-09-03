@@ -1,1 +1,0 @@
-# ssd-github-actions
